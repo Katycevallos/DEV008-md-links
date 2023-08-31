@@ -1,27 +1,54 @@
-//const chalk = require('chalk');
-const { routAbsolute, routExists, isDirectory, readFilesMD, extractLinks, createObjects  } = require ("./funciones.js");
+const chalk = require('chalk');
+const { routAbsolute, routExists, isDirectory, readFilesMD, extractLinks, askForAxiosHTTP, uniqueLinks, stadisticsBroken } = require("./funciones.js");
 
 
 //************************ PROMESA  *******************/
 
-const mdlinks = (route, options) => {
-  return new Promise ((resolve, reject) => {
+const mdLinks = (route, options) => {
+  return new Promise((resolve, reject) => {
     const ifExists = routExists(route);
-    if (ifExists) {
-    routAbsolute(route);
+    if (ifExists === true) {
+      const routeAbsolute1 = routAbsolute(route);
+      //console.log(routeAbsolute1);
+      const mdFiles = isDirectory(routeAbsolute1);
+      //console.log(mdFiles); 
 
-    const mdFiles = isDirectory(route);
-    const readfilesMd = readFilesMD(mdFiles); 
-    const linksArray = extractLinks(readfilesMd);
-    const createObjectsa = createObjects(linksArray, route);
-    
-    resolve(createObjectsa)
-     
-    }  else {
-      console.log('La ruta ingresada no es valida');
+      const readfilesMd = readFilesMD(mdFiles);
+      //resolve(readfilesMd)
+
+      if (readfilesMd.length === 0) {
+        reject('No existen archivos con extensión .md')
+      } 
+      const linksArray = extractLinks(readfilesMd);
+      //stats false validate false file, ref, text 
+      if (options.validate === false && options.stats === false) {
+        resolve(linksArray)
+      }
+      // //stats true validate false (total link y links unicos)
+      const statistics = uniqueLinks(linksArray);
+      if (options.validate === false && options.stats === true) {
+        resolve(statistics)
+      }
+      // //stats true validate true (total unicos rotos)
+
+      if (options.validate === true && options.stats === true) {
+        askForAxiosHTTP(linksArray)
+        .then((response) => {
+          resolve(stadisticsBroken(response))
+        })
+      }
+      // // resolve(readContentHTPP href, text, link, status, mensaje) // validate es true stats es false 
+      if (options.validate === true && options.stats === false) {
+        const readContentHTPP = askForAxiosHTTP(linksArray);
+        readContentHTPP.then((response) => {
+          resolve(response)
+        })
+
+      } 
+    } else {
+      reject('La ruta ingresada no es valida')
     }
-  })
-
+  });
 }
 
 
@@ -29,14 +56,15 @@ const mdlinks = (route, options) => {
 //************************ PRUEBA  *******************/
 
 
-mdlinks("../prueba")
-.then(prueba => {
+// mdLinks("../prueba", {validate: true, stats: true})
+//   .then(prueba => {
 
-  console.log('Ruta Encontrada:', prueba);
+//     console.log(( prueba));
+//     // console.log(chalk.red('unique:', prueba.unique));
+//     // console.log(chalk.red('broken:', prueba.broke));
+//   })
+//   .catch(error => {
+//     console.log(error)
+//   });
 
-})
-.catch(error => {
-  console.log(error)
-});
-
-module.exports = {mdlinks};
+module.exports = { mdLinks };
